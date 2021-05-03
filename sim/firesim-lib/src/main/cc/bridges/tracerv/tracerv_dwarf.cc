@@ -8,8 +8,8 @@
 #include <cstdint>
 #include <cinttypes>
 
-#include <dwarf.h>
-#include <libdwarf.h>
+#include </usr/include/libdwarf/dwarf.h>
+#include </usr/include/libdwarf/libdwarf.h>
 
 namespace
 {
