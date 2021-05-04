@@ -18,6 +18,7 @@
 #include "bridges/synthesized_assertions.h"
 #include "bridges/synthesized_prints.h"
 #include "bridges/heartbeat.h"
+#include "bridges/coverage.h"
 
 firesim_top_t::firesim_top_t(int argc, char** argv)
 {
@@ -517,6 +518,19 @@ firesim_top_t::firesim_top_t(int argc, char** argv)
 #ifdef PRINTBRIDGEMODULE_7_PRESENT
     INSTANTIATE_PRINTF(add_bridge_driver,7)
 #endif
+
+#ifdef COVERAGEBRIDGEMODULE_0_PRESENT
+    COVERAGEBRIDGEMODULE_0_substruct_create
+    add_bridge_driver(new coverage_t(this, args,
+                                     COVERAGEBRIDGEMODULE_0_substruct,
+                                     COVERAGEBRIDGEMODULE_0_counter_width,
+                                     COVERAGEBRIDGEMODULE_0_cover_count,
+                                     COVERAGEBRIDGEMODULE_0_covers));
+#endif
+#ifdef COVERAGEBRIDGEMODULE_1_PRESENT
+    static_assert(false, "Only a single coverage bridge is supported at the moment!");
+#endif
+
     // Add functions you'd like to periodically invoke on a paused simulator here.
     if (profile_interval != -1) {
         register_task([this](){ return this->profile_models();}, 0);

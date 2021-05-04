@@ -10,7 +10,7 @@ import freechips.rocketchip.util.DecoupledHelper
 import midas.widgets._
 
 
-case class CoverageBridgeKey(counterWidth: Int, coverCount: Int)
+case class CoverageBridgeKey(counterWidth: Int, covers: List[String])
 
 
 class CoverageBundle(val counterWidth: Int) extends Bundle {
@@ -26,10 +26,15 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
 
     // keep scan chain disables for now
     hPort.toHost.hReady := true.B
-    hPort.hBits.cover_en := false.B
 
     // ignore scanchain output for now
     hPort.fromHost.hValid := true.B
+    hPort.hBits.cover_en := false.B
+
+    // count simulation cycles
+    val simCycles = RegInit(0.U(64.W))
+    when(hPort.toHost.fire()) { simCycles := simCycles + 1.U }
+    genROReg(simCycles, "sim_cycles")
 
     val test = 1234567.U(32.W)
     genROReg(test, "cover_test")
@@ -40,8 +45,9 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
       import CppGenerationUtils._
       val headerWidgetName = getWName.toUpperCase
       super.genHeader(base, sb)
-      sb.append(genConstStatic(s"${headerWidgetName}_cover_count", UInt32(key.coverCount)))
+      sb.append(genConstStatic(s"${headerWidgetName}_cover_count", UInt32(key.covers.length)))
       sb.append(genConstStatic(s"${headerWidgetName}_counter_width", UInt32(key.counterWidth)))
+      sb.append(genArray(s"${headerWidgetName}_covers", key.covers.map(CStrLit)))
     }
   }
 }
