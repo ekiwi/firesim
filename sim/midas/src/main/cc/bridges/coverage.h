@@ -30,6 +30,7 @@ class coverage_t: public bridge_driver_t
         const unsigned int counter_width;
         const unsigned int cover_count;
         const char* const* covers;
+        bool scanning;
 
 };
 

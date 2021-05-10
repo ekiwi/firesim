@@ -63,6 +63,9 @@ class serial_t: public bridge_driver_t
         void handle_loadmem_read(firesim_loadmem_t loadmem);
         void handle_loadmem_write(firesim_loadmem_t loadmem);
         void serial_bypass_via_loadmem();
+
+        // synchronization with coverage collection
+        bool waiting_for_coverage;
 };
 #endif // SERIALBRIDGEMODULE_struct_guard
 

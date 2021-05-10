@@ -2,10 +2,18 @@
 #ifdef SERIALBRIDGEMODULE_struct_guard
 
 #include <assert.h>
+#include <iostream>
 #include "serial.h"
 
+
+// signal from serial module to coverage
+extern bool coverage_start_scanning;
+// signal from coverage to serial module
+extern bool coverage_done_scanning;
+
+
 serial_t::serial_t(simif_t* sim, const std::vector<std::string>& args, SERIALBRIDGEMODULE_struct * mmio_addrs, int serialno, bool has_mem, int64_t mem_host_offset):
-        bridge_driver_t(sim), sim(sim), has_mem(has_mem), mem_host_offset(mem_host_offset) {
+        bridge_driver_t(sim), sim(sim), has_mem(has_mem), mem_host_offset(mem_host_offset), waiting_for_coverage(false) {
 
     this->mmio_addrs = mmio_addrs;
 
@@ -141,19 +149,43 @@ void serial_t::serial_bypass_via_loadmem() {
 void serial_t::tick() {
     // First, check to see step_size tokens have been enqueued
     if (!read(this->mmio_addrs->done)) return;
-    // Collect all the responses from the target
-    this->recv();
-    // Punt to FESVR
-    if (!fesvr->data_available()) {
-        fesvr->tick();
-    }
-    if (fesvr->has_loadmem_reqs()) {
-        serial_bypass_via_loadmem();
-    }
-    if (!terminate()) {
-        // Write all the requests to the target
-        this->send();
-        go();
+
+    if(waiting_for_coverage) {
+        if(coverage_done_scanning) {
+            std::cout << "[SERIAL] done scanning" << std::endl;
+            waiting_for_coverage = false;
+        } else {
+            // only advance the simulation, the fesvr seems to be dead at this point in time
+            std::cout << "[SERIAL] done scanning" << std::endl;
+            // Write all the requests to the target
+            this->send();
+            go();
+        }
+    } else {
+        // Collect all the responses from the target
+        this->recv();
+
+        // Punt to FESVR
+        if (!fesvr->data_available()) {
+            fesvr->tick();
+        }
+        if (fesvr->has_loadmem_reqs()) {
+            serial_bypass_via_loadmem();
+        }
+        if (!terminate()) {
+            // Write all the requests to the target
+            this->send();
+            go();
+        } else {
+            // signal to the coverage module that it is time to scan out results
+            waiting_for_coverage = true;
+            coverage_start_scanning = true;
+            std::cout << "[SERIAL] starting to scan out coverage" << std::endl;
+
+            // Write all the requests to the target
+            this->send();
+            go();
+        }
     }
 }
 

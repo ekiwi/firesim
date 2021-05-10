@@ -46,8 +46,14 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
       coverCounter := coverCounter + 1.U
     }
     val scanning = RegInit(false.B)
-    // when we reach cycle N, we switch into scanning mode
-    when(simCycles === CoverageAt.U) { scanning := true.B; coverCounter := 0.U }
+    genRORegInit(scanning, "scanning", false.B)
+
+    // the register is used to start scanning
+    val startScanning = Wire(Bool())
+    Pulsify(genWORegInit(startScanning, "start_scanning", false.B), 1)
+    when(startScanning) { scanning := true.B; coverCounter := 0.U }
+
+
     when(scanning) {
       // in scanning mode we keep the scan chain enabled until we have scanned out everything
       hPort.hBits.cover_en := true.B
