@@ -155,8 +155,6 @@ void serial_t::tick() {
             std::cout << "[SERIAL] done scanning" << std::endl;
             waiting_for_coverage = false;
         } else {
-            // only advance the simulation, the fesvr seems to be dead at this point in time
-            std::cout << "[SERIAL] done scanning" << std::endl;
             // Write all the requests to the target
             this->send();
             go();

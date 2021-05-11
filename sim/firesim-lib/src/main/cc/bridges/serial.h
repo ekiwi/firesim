@@ -40,7 +40,7 @@ class serial_t: public bridge_driver_t
         ~serial_t();
         virtual void init();
         virtual void tick();
-        virtual bool terminate(){ return fesvr->done(); }
+        virtual bool terminate(){ return fesvr->done() && !waiting_for_coverage; }
         virtual int exit_code(){ return fesvr->exit_code(); }
         virtual void finish() {};
 

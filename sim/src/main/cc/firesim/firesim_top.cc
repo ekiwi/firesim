@@ -523,8 +523,10 @@ firesim_top_t::firesim_top_t(int argc, char** argv)
     COVERAGEBRIDGEMODULE_0_substruct_create
     add_bridge_driver(new coverage_t(this, args,
                                      COVERAGEBRIDGEMODULE_0_substruct,
+                                     COVERAGEBRIDGEMODULE_0_DMA_ADDR,
                                      COVERAGEBRIDGEMODULE_0_counter_width,
                                      COVERAGEBRIDGEMODULE_0_cover_count,
+                                     COVERAGEBRIDGEMODULE_0_counters_per_beat,
                                      COVERAGEBRIDGEMODULE_0_covers));
 #endif
 #ifdef COVERAGEBRIDGEMODULE_1_PRESENT

@@ -10,7 +10,10 @@ import freechips.rocketchip.util.DecoupledHelper
 import midas.widgets._
 
 
-case class CoverageBridgeKey(counterWidth: Int, covers: List[String])
+case class CoverageBridgeKey(counterWidth: Int, covers: List[String]) {
+  override def toString =
+    s"CoverageBridgeKey(counterWidth = $counterWidth, covers = ${covers.length})"
+}
 
 
 class CoverageBundle(val counterWidth: Int) extends Bundle {
@@ -20,62 +23,78 @@ class CoverageBundle(val counterWidth: Int) extends Bundle {
 }
 
 class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) extends BridgeModule[HostPortIO[CoverageBundle]]()(p) {
-  lazy val module = new BridgeModuleImp(this) {
+  lazy val module = new BridgeModuleImp(this) with UnidirectionalDMAToHostCPU {
     val io = IO(new WidgetIO())
     val hPort = IO(HostPort(new CoverageBundle(key.counterWidth)))
 
-    // keep scan chain disabled for now
-    hPort.toHost.hReady := true.B
+    // derive some basic constants from the key
+    val CounterWidth = key.counterWidth
+    val PowerOfTwoCounterWidth = 1 << log2Ceil(CounterWidth)
+    val NumberOfCounters = key.covers.length
 
-    // ignore scanchain output for now
-    hPort.fromHost.hValid := true.B
-    hPort.hBits.cover_en := false.B
-
-    // count simulation cycles (this is just to learn more about bridges)
-    val simCycles = RegInit(0.U(64.W))
-    when(hPort.toHost.fire()) { simCycles := simCycles + 1.U }
-    genROReg(simCycles(31,0), "sim_cycles")
-    genROReg(simCycles(63,32), "sim_cycles_2")
-
-
-    // we are going to clock out the coverage after N cycles
-    val CoverageAt = 4000
-    // the cover counter counts how long we enable to scan chain for
-    val coverCounter = RegInit(0.U(32.W))
-    when(hPort.fromHost.fire() && hPort.hBits.cover_en) {
-      coverCounter := coverCounter + 1.U
-    }
+    // remember whether we are in scanning mode
     val scanning = RegInit(false.B)
     genRORegInit(scanning, "scanning", false.B)
 
-    // the register is used to start scanning
+    // register to start scanning
     val startScanning = Wire(Bool())
     Pulsify(genWORegInit(startScanning, "start_scanning", false.B), 1)
-    when(startScanning) { scanning := true.B; coverCounter := 0.U }
 
+    //////////////////////////////////////////////////////////////////
+    // fromTarget: we connect the cover chain output to the DMA queue
+    hPort.toHost.hReady := true.B
 
-    when(scanning) {
-      // in scanning mode we keep the scan chain enabled until we have scanned out everything
-      hPort.hBits.cover_en := true.B
-      when(coverCounter === key.covers.length.U) {
-        scanning := false.B
-      }
+    // DMA port
+    override lazy val toHostCPUQueueDepth = 6144 // 12 Ultrascale+ URAMs
+    override lazy val dmaSize = BigInt(dmaBytes * toHostCPUQueueDepth)
+
+    // how many coverage counters fit into a single DMA beat?
+    val CountersPerBeat = (dmaBytes * 8) / PowerOfTwoCounterWidth
+    require(CountersPerBeat > 0,
+      f"Coverage counter size (${key.counterWidth}bit) cannot be greater than the DMA beat size (${dmaBytes * 8}bit)")
+
+    // adapt smaller counter tokens to larger DMA size
+    val mwFifoDepth = math.max(1, CountersPerBeat)
+    val widthAdapter = Module(new junctions.MultiWidthFifo(PowerOfTwoCounterWidth, dma.nastiXDataBits, mwFifoDepth))
+    outgoingPCISdat.io.enq <> widthAdapter.io.out
+
+    // receiving data is delayed by two host (?) cycles because of the
+    // registers on the from/to host interface
+    val receiving = RegEnable(RegEnable(scanning, false.B, hPort.toHost.fire()), false.B, hPort.toHost.fire())
+
+    // receive data from target
+    widthAdapter.io.in.bits := hPort.hBits.cover_out
+    widthAdapter.io.in.valid := receiving && hPort.toHost.fire()
+
+    // we want to potentially receive some more values in order to flush out the size adapter
+    val ValuesToRead = math.ceil(NumberOfCounters.toDouble / CountersPerBeat.toDouble).toInt * CountersPerBeat
+
+    // count the number of values we have received while in scanning mode
+    val coverOutCounter = Reg(UInt(32.W))
+    val fromHostDone = coverOutCounter === ValuesToRead.U
+    when(startScanning) { coverOutCounter := 0.U }
+    .elsewhen(hPort.toHost.fire() && receiving && !fromHostDone) {
+      coverOutCounter := coverOutCounter + 1.U
     }
 
-    // use a queue that is big enough to contain all cover counts
-    val nextPowerOfTwo = BigInt(1) << log2Ceil(key.covers.length)
-    val counterType = UInt(key.counterWidth.W)
-    val counts = Module(new Queue(counterType, nextPowerOfTwo.toInt))
-    counts.io.enq.bits := hPort.hBits.cover_out
-    counts.io.enq.valid := scanning && hPort.toHost.fire()
-    // we don't empty the queue yet :(
-    counts.io.deq.ready := false.B
+    //////////////////////////////////////////////////////////////////
+    // toTarget
 
-    genROReg(counts.io.count, "cover_data_available")
+    // we count the number of _simulation_ cycles that the cover chain is active in
+    val enCount = Reg(UInt(32.W))
+    val toHostDone = enCount === key.covers.length.U
+    when(startScanning) { enCount := 0.U }
+        .elsewhen(hPort.fromHost.fire() && scanning && !toHostDone) {
+          enCount := enCount + 1.U
+        }
 
+    // the scan chain is enabled iff we are in scanning mode
+    hPort.fromHost.hValid := true.B
+    hPort.hBits.cover_en := scanning && !toHostDone
 
-    val test = 1234567.U(32.W)
-    genROReg(test, "cover_test")
+    // logic to start/stop scanning
+    when(startScanning) { scanning := true.B }
+    when(scanning && fromHostDone && toHostDone) { scanning := false.B }
 
     genCRFile()
 
@@ -83,9 +102,11 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
       import CppGenerationUtils._
       val headerWidgetName = getWName.toUpperCase
       super.genHeader(base, sb)
-      sb.append(genConstStatic(s"${headerWidgetName}_cover_count", UInt32(key.covers.length)))
-      sb.append(genConstStatic(s"${headerWidgetName}_counter_width", UInt32(key.counterWidth)))
-      sb.append(genArray(s"${headerWidgetName}_covers", key.covers.map(CStrLit)))
+      sb.append(genConstStatic(s"${headerWidgetName}_cover_count", UInt32(NumberOfCounters)))
+      sb.append(genConstStatic(s"${headerWidgetName}_counter_width", UInt32(PowerOfTwoCounterWidth)))
+      sb.append(genConstStatic(s"${headerWidgetName}_counters_per_beat", UInt32(CountersPerBeat)))
+      // we reverse the covers in order to have the name of the first counter to be read at the head
+      sb.append(genArray(s"${headerWidgetName}_covers", key.covers.reverse.map(CStrLit)))
     }
   }
 }
