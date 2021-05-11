@@ -58,7 +58,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     val widthAdapter = Module(new junctions.MultiWidthFifo(PowerOfTwoCounterWidth, dma.nastiXDataBits, mwFifoDepth))
     outgoingPCISdat.io.enq <> widthAdapter.io.out
 
-    // receiving data is delayed by two host (?) cycles because of the
+    // receiving data is delayed by two _target_ cycles because of the
     // registers on the from/to host interface
     val receiving = RegEnable(RegEnable(scanning, false.B, hPort.toHost.fire()), false.B, hPort.toHost.fire())
 

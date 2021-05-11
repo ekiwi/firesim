@@ -82,18 +82,9 @@ void coverage_t::read_counts() {
                     value |= (static_cast<uint64_t>(buf[counter_offset + b]) << (8 * b));
                 }
 
-
                 // debug print
-                if(counter_index <= 16) {
-                    std::cout << "[COVERAGE] " << covers[counter_index] << "=" << value
-                              << "; counter_offset=" << counter_offset
-                              << "; counter_bytes=" << counter_bytes
-                              << std::endl;
-                    for(size_t b = 0; b < counter_bytes; b++) {
-                        std::cout << "value |= (buf[" << (counter_offset + b) << "]) << (" << (8 * b) << "));"
-                                  << "; buf[...]=" << static_cast<uint64_t>(buf[counter_offset + b])
-                                  << std::endl;
-                    }
+                if(counter_index <= 17) {
+                    std::cout << "[COVERAGE] " << covers[counter_index] << "=" << value << std::endl;
                 }
 
                 counters[counter_index] = value;
