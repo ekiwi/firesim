@@ -20,6 +20,13 @@
 #include "bridges/heartbeat.h"
 #include "bridges/coverage.h"
 
+// signal from serial module to coverage
+bool coverage_start_scanning = false;
+// signal from coverage to serial module
+bool coverage_done_scanning = false;
+// signals whether coverage bridge is installed
+bool coverage_available = false;
+
 firesim_top_t::firesim_top_t(int argc, char** argv)
 {
     std::vector<std::string> args(argv + 1, argv + argc);

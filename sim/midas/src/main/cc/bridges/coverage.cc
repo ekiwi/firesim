@@ -7,10 +7,11 @@
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 // signal from serial module to coverage
-bool coverage_start_scanning = false;
+extern bool coverage_start_scanning;
 // signal from coverage to serial module
-bool coverage_done_scanning = false;
-
+extern bool coverage_done_scanning;
+// signals whether coverage bridge is installed
+extern bool coverage_available;
 
 coverage_t::coverage_t(
     simif_t* sim,
@@ -33,6 +34,7 @@ coverage_t::coverage_t(
     counter_index(0)
 {
   assertm(counter_width <= 64, "The maximum counter size supported by the C++ code is 64-bit!");
+  coverage_available = true;
 }
 
 coverage_t::~coverage_t() {

@@ -10,7 +10,8 @@
 extern bool coverage_start_scanning;
 // signal from coverage to serial module
 extern bool coverage_done_scanning;
-
+// signals whether coverage bridge is installed
+extern bool coverage_available;
 
 serial_t::serial_t(simif_t* sim, const std::vector<std::string>& args, SERIALBRIDGEMODULE_struct * mmio_addrs, int serialno, bool has_mem, int64_t mem_host_offset):
         bridge_driver_t(sim), sim(sim), has_mem(has_mem), mem_host_offset(mem_host_offset), waiting_for_coverage(false) {
@@ -174,7 +175,7 @@ void serial_t::tick() {
             // Write all the requests to the target
             this->send();
             go();
-        } else {
+        } else if(coverage_available) {
             // signal to the coverage module that it is time to scan out results
             waiting_for_coverage = true;
             coverage_start_scanning = true;
@@ -183,6 +184,9 @@ void serial_t::tick() {
             // Write all the requests to the target
             this->send();
             go();
+        } else {
+            // done!
+            waiting_for_coverage = false;
         }
     }
 }
