@@ -30,11 +30,31 @@ coverage_t::coverage_t(
     counters_per_beat(counters_per_beat),
     covers(covers),
     scanning(false),
-    counters(nullptr),
     counter_index(0)
 {
   assertm(counter_width <= 64, "The maximum counter size supported by the C++ code is 64-bit!");
-  coverage_available = true;
+
+  // parse the arguments to find the name of the output file
+  std::string filename = "";
+  const std::string arg_name("+cover-json=");
+  for(auto arg : args) {
+    if(arg.find(arg_name) == 0) {
+        filename = arg.erase(0, arg_name.length());
+    }
+  }
+  if(filename.length() == 0) {
+    std::cerr << "[COVERAGE] missing +cover-json argument, will be disabled!" << std::endl;
+  } else {
+    printfile.open(filename, std::ios_base::out | std::ios_base::binary);
+    if(!printfile.is_open()) {
+        std::cerr << "[COVERAGE] failed to open " << filename << " for writing, coverage will be disabled!" << std::endl;
+    } else {
+        coverage_available = true;
+
+        // write start of JSON file
+        printfile << "[" << std::endl << "{\"class\":\"chiseltest.coverage.TestCoverage\",\"counts\":[" << std::endl;
+    }
+  }
 }
 
 coverage_t::~coverage_t() {
@@ -85,11 +105,20 @@ void coverage_t::read_counts() {
                 }
 
                 // debug print
-                if(counter_index <= 17) {
-                    std::cout << "[COVERAGE] " << covers[counter_index] << "=" << value << std::endl;
+                //if(counter_index <= 17) {
+                //    std::cout << "[COVERAGE] " << covers[counter_index] << "=" << value << std::endl;
+                //}
+
+                // print to file
+                const auto is_last = counter_index + 1 == cover_count;
+                if(!is_last) {
+                    printfile << "{\"" << covers[counter_index] << "\":" << value << "}," << std::endl;
+                } else {
+                    printfile << "{\"" << covers[counter_index] << "\":" << value << "}" << std::endl
+                              << "]}" << std::endl << "}" << std::endl;
+                    printfile.close();
                 }
 
-                counters[counter_index] = value;
                 counter_index++;
             }
         }
@@ -97,10 +126,11 @@ void coverage_t::read_counts() {
 }
 
 void coverage_t::tick() {
+    // check if coverage is disabled
+    if(!coverage_available) return;
+
     if(coverage_start_scanning) {
       std::cout << "[COVERAGE] starting to scan" << std::endl;
-      // allocate space for the results
-      counters = new uint64_t[cover_count];
       counter_index = 0;
 
       // reset the flag

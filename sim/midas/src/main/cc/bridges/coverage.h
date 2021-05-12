@@ -37,9 +37,9 @@ class coverage_t: public bridge_driver_t
         const unsigned int counters_per_beat;
         const char* const* covers;
         bool scanning;
-        uint64_t* counters;
         size_t counter_index;
         const size_t beat_bytes  = DMA_DATA_BITS / 8;
+        std::ofstream printfile;
 
 };
 
