@@ -31,6 +31,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     val CounterWidth = key.counterWidth
     val PowerOfTwoCounterWidth = 1 << log2Ceil(CounterWidth)
     val NumberOfCounters = key.covers.length
+    println(s"CounterWidth=$CounterWidth, PowerOfTwoCounterWidth=$PowerOfTwoCounterWidth, NumberOfCounters=$NumberOfCounters")
 
     // remember whether we are in scanning mode
     val scanning = RegInit(false.B)
@@ -54,8 +55,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
       f"Coverage counter size (${key.counterWidth}bit) cannot be greater than the DMA beat size (${dmaBytes * 8}bit)")
 
     // adapt smaller counter tokens to larger DMA size
-    val mwFifoDepth = math.max(1, CountersPerBeat)
-    val widthAdapter = Module(new junctions.MultiWidthFifo(PowerOfTwoCounterWidth, dma.nastiXDataBits, mwFifoDepth))
+    val widthAdapter = Module(new NarrowToWideAdapter(PowerOfTwoCounterWidth, dma.nastiXDataBits))
     outgoingPCISdat.io.enq <> widthAdapter.io.out
 
     // receiving data is delayed by two _target_ cycles because of the
@@ -100,13 +100,49 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
 
     override def genHeader(base: BigInt, sb: StringBuilder) {
       import CppGenerationUtils._
+      println("Generating Headers")
       val headerWidgetName = getWName.toUpperCase
       super.genHeader(base, sb)
       sb.append(genConstStatic(s"${headerWidgetName}_cover_count", UInt32(NumberOfCounters)))
       sb.append(genConstStatic(s"${headerWidgetName}_counter_width", UInt32(PowerOfTwoCounterWidth)))
       sb.append(genConstStatic(s"${headerWidgetName}_counters_per_beat", UInt32(CountersPerBeat)))
       // we reverse the covers in order to have the name of the first counter to be read at the head
+      println("12345678900")
       sb.append(genArray(s"${headerWidgetName}_covers", key.covers.reverse.map(CStrLit)))
+      println("Done generating headers")
     }
+
+    println("DONE generating Coverage Bridge")
   }
+}
+
+
+class NarrowToWideAdapter(inW: Int, outW: Int)  extends MultiIOModule {
+  require(inW < outW, s"This module requires the input with to be smaller than the output width!")
+  require(inW > 0, s"This module requires the input to be at least 1-bit wide!")
+  require(outW % inW == 0, s"NarrowToWideAdapter: out: $outW not divisible by in: $inW")
+
+  val io = IO(new Bundle {
+    val in = Flipped(Decoupled(UInt(inW.W)))
+    val out = Decoupled(UInt(outW.W))
+  })
+
+  val nBeats = outW / inW
+
+  // shift new values in whenever a valid input transaction happens
+  val doShift = io.in.fire()
+  val regs = Seq.iterate(io.in.bits, nBeats + 1)(RegEnable(_, doShift))
+  io.out.bits := Cat(regs.reverse)
+
+  // count the number of (valid) entries in the shift register
+  val count = RegInit(0.U(log2Ceil(nBeats+1).W))
+  when(io.out.fire()) { count := doShift }
+  .elsewhen(doShift) { count := count + 1.U }
+  val shiftFull = count === nBeats.U
+
+  // we can accept new data if the shift register is not full, or if it will be emptied this cycle
+  io.in.ready := !shiftFull || io.out.fire()
+
+  // we can output data when the shift register is full
+  io.out.valid := shiftFull
 }
