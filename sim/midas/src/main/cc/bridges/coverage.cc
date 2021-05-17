@@ -90,37 +90,46 @@ void coverage_t::read_counts() {
             // leave the loop if we have already updated all counters
             if(counter_index >= cover_count) break;
 
+            uint64_t value = 0;
+
             // for counter sizes smaller than 8 (1, 2 or 4 bits) we need some special handling
             if(counter_width < 8) {
-                assertm(false, "TODO: support counters with smaller bit widths!");
+                assert(counter_width == 1 || counter_width == 2 || counter_width == 4);
+                const auto counter_byte = (ii * counter_width) / 8;
+                const auto mask = (1 << counter_width) - 1;
+                const auto bit_offset = 7 - ((ii * counter_width) % 8);
+
+                assert(counter_byte < bytes_received); // check for out of bounds access
+                assert(bit_offset >= 0 && bit_offset < 8);
+
+                value = (static_cast<uint64_t>(buf[counter_byte]) >> bit_offset) & mask;
             } else {
                 // counter of size 8 or larger are byte aligned!
                 assert((counter_width / 8) * 8 == counter_width);
                 const auto counter_bytes = counter_width / 8;
                 const auto counter_offset = ii * counter_bytes;
 
-                uint64_t value = 0;
                 for(size_t b = 0; b < counter_bytes; b++) {
                     value |= (static_cast<uint64_t>(buf[counter_offset + b]) << (8 * b));
                 }
-
-                // debug print
-                //if(counter_index <= 17) {
-                //    std::cout << "[COVERAGE] " << covers[counter_index] << "=" << value << std::endl;
-                //}
-
-                // print to file
-                const auto is_last = counter_index + 1 == cover_count;
-                if(!is_last) {
-                    printfile << "{\"" << covers[counter_index] << "\":" << value << "}," << std::endl;
-                } else {
-                    printfile << "{\"" << covers[counter_index] << "\":" << value << "}" << std::endl
-                              << "]}" << std::endl << "}" << std::endl;
-                    printfile.close();
-                }
-
-                counter_index++;
             }
+
+            // debug print
+            //if(counter_index <= 17) {
+            //    std::cout << "[COVERAGE] " << covers[counter_index] << "=" << value << std::endl;
+            //}
+
+            // print to file
+            const auto is_last = counter_index + 1 == cover_count;
+            if(!is_last) {
+                printfile << "{\"" << covers[counter_index] << "\":" << value << "}," << std::endl;
+            } else {
+                printfile << "{\"" << covers[counter_index] << "\":" << value << "}" << std::endl
+                          << "]}" << std::endl << "}" << std::endl;
+                printfile.close();
+            }
+
+            counter_index++;
         }
     }
 }
