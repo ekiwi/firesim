@@ -31,7 +31,6 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     val CounterWidth = key.counterWidth
     val PowerOfTwoCounterWidth = 1 << log2Ceil(CounterWidth)
     val NumberOfCounters = key.covers.length
-    println(s"CounterWidth=$CounterWidth, PowerOfTwoCounterWidth=$PowerOfTwoCounterWidth, NumberOfCounters=$NumberOfCounters")
 
     // remember whether we are in scanning mode
     val scanning = RegInit(false.B)
@@ -100,19 +99,15 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
 
     override def genHeader(base: BigInt, sb: StringBuilder) {
       import CppGenerationUtils._
-      println("Generating Headers")
       val headerWidgetName = getWName.toUpperCase
       super.genHeader(base, sb)
       sb.append(genConstStatic(s"${headerWidgetName}_cover_count", UInt32(NumberOfCounters)))
       sb.append(genConstStatic(s"${headerWidgetName}_counter_width", UInt32(PowerOfTwoCounterWidth)))
       sb.append(genConstStatic(s"${headerWidgetName}_counters_per_beat", UInt32(CountersPerBeat)))
       // we reverse the covers in order to have the name of the first counter to be read at the head
-      println("12345678900")
       sb.append(genArray(s"${headerWidgetName}_covers", key.covers.reverse.map(CStrLit)))
-      println("Done generating headers")
     }
 
-    println("DONE generating Coverage Bridge")
   }
 }
 
@@ -131,8 +126,11 @@ class NarrowToWideAdapter(inW: Int, outW: Int)  extends MultiIOModule {
 
   // shift new values in whenever a valid input transaction happens
   val doShift = io.in.fire()
-  val regs = Seq.iterate(io.in.bits, nBeats + 1)(RegEnable(_, doShift))
-  io.out.bits := Cat(regs.reverse)
+  // TODO: replace with ShiftRegisters when Chisel 3.5 is released
+  val regs = Seq.iterate(io.in.bits, nBeats + 1)(RegEnable(_, doShift)).drop(1)
+  val inputBuffer = RegEnable(io.in.bits, doShift)
+  val msb = Mux(doShift, io.in.bits, inputBuffer)
+  io.out.bits := Cat(Seq(msb) ++ regs)
 
   // count the number of (valid) entries in the shift register
   val count = RegInit(0.U(log2Ceil(nBeats+1).W))
