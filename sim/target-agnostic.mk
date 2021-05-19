@@ -56,7 +56,8 @@ fame_annos := $(GENERATED_DIR)/post-bridge-extraction.json
 # pass --no-legacy-dedup as well
 $(VERILOG) $(HEADER) $(fame_annos): $(FIRRTL_FILE) $(ANNO_FILE) $(SCALA_BUILDTOOL_DEPS)
 	$(call run_scala_main,$(firesim_sbt_project),midas.stage.GoldenGateMain,\
-		-o $(VERILOG) -i $(FIRRTL_FILE) -td $(GENERATED_DIR) \
+		-o $(VERILOG) \
+		-td $(GENERATED_DIR) \
 		-faf $(ANNO_FILE) \
 		-ggcp $(PLATFORM_CONFIG_PACKAGE) \
 		-ggcs $(PLATFORM_CONFIG) \

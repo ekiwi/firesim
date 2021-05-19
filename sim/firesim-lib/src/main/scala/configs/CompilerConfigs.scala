@@ -82,6 +82,7 @@ class WithAutoCounterPrintf extends Config((site, here, up) => {
 
 class BaseF1Config extends Config(
   new WithWiringTransform ++
+  new WithPlusArgReaderRemoval ++
   new WithAsyncResetReplacement ++
   new WithEC2F1Artefacts ++
   new WithILATopWiringTransform ++
