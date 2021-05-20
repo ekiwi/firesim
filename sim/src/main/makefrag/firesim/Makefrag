@@ -61,7 +61,7 @@ $(FIRRTL_FILE) $(ANNO_FILE): $(PREINST_ANNO_FILE) $(PREINST_FIRRTL_FILE) $(cover
 	--remove-blackbox-annos \
 	--remove-statement-names \
 	--emit-cover-info \
-	--cover-scan-chain 16 \
+	--cover-scan-chain \
 	--line-coverage \
 	-ll info \
 	-i $(PREINST_FIRRTL_FILE) \
