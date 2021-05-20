@@ -30,7 +30,8 @@ coverage_t::coverage_t(
     counters_per_beat(counters_per_beat),
     covers(covers),
     scanning(false),
-    counter_index(0)
+    counter_index(0),
+    first_tick(true)
 {
   assertm(counter_width <= 64, "The maximum counter size supported by the C++ code is 64-bit!");
 
@@ -135,10 +136,16 @@ void coverage_t::read_counts() {
 }
 
 void coverage_t::tick() {
+    if(first_tick) {
+        first_tick = false;
+        sim_start_time = timestamp();
+    }
+
     // check if coverage is disabled
     if(!coverage_available) return;
 
     if(coverage_start_scanning) {
+      scan_start_time = timestamp();
       std::cout << "[COVERAGE] starting to scan" << std::endl;
       counter_index = 0;
 
@@ -160,6 +167,14 @@ void coverage_t::tick() {
             // signal the serial bridge that it can stop the simulation now
             coverage_done_scanning = true;
             std::cout << "[COVERAGE] done scanning" << std::endl;
+
+            // report times
+            const uint64_t end = timestamp();
+            const auto sim_time = diff_secs(end, sim_start_time);
+            const auto scan_time = diff_secs(end, scan_start_time);
+            std::cout << "[COVERAGE] " << scan_time << "s (" << (scan_time / sim_time * 100.0)
+                      << "% of total " << sim_time << "s simulation time) spent scanning out coverage"
+                      << std::endl;
         }
     }
 }
