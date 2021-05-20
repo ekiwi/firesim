@@ -40,6 +40,9 @@ class coverage_t: public bridge_driver_t
         size_t counter_index;
         const size_t beat_bytes  = DMA_DATA_BITS / 8;
         std::ofstream printfile;
+        uint64_t sim_start_time;
+        uint64_t scan_start_time;
+        bool first_tick;
 
 };
 
