@@ -63,6 +63,8 @@ $(FIRRTL_FILE) $(ANNO_FILE): $(PREINST_ANNO_FILE) $(PREINST_FIRRTL_FILE) $(cover
 	--emit-cover-info \
 	--cover-scan-chain \
 	--line-coverage \
+	--toggle-coverage \
+	--do-not-cover FireSim:FireSim \
 	-ll info \
 	-i $(PREINST_FIRRTL_FILE) \
 	-faf $(PREINST_ANNO_FILE) \
