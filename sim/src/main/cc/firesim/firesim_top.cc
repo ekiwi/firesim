@@ -12,6 +12,15 @@
 #include "bridges/simplenic.h"
 #include "bridges/tracerv.h"
 #include "bridges/uart.h"
+#include "bridges/coverage.h"
+
+
+// signal from serial module to coverage
+bool coverage_start_scanning = false;
+// signal from coverage to serial module
+bool coverage_done_scanning = false;
+// signals whether coverage bridge is installed
+bool coverage_available = false;
 
 // Golden Gate provided bridge drivers
 #include "bridges/fased_memory_timing_model.h"
@@ -554,6 +563,21 @@ firesim_top_t::firesim_top_t(int argc, char **argv) {
 #ifdef PRINTBRIDGEMODULE_7_PRESENT
     INSTANTIATE_PRINTF(add_bridge_driver,7)
 #endif
+
+#ifdef COVERAGEBRIDGEMODULE_0_PRESENT
+    COVERAGEBRIDGEMODULE_0_substruct_create
+    add_bridge_driver(new coverage_t(this, args,
+                                     COVERAGEBRIDGEMODULE_0_substruct,
+                                     COVERAGEBRIDGEMODULE_0_DMA_ADDR,
+                                     COVERAGEBRIDGEMODULE_0_counter_width,
+                                     COVERAGEBRIDGEMODULE_0_cover_count,
+                                     COVERAGEBRIDGEMODULE_0_counters_per_beat,
+                                     COVERAGEBRIDGEMODULE_0_covers));
+#endif
+#ifdef COVERAGEBRIDGEMODULE_1_PRESENT
+    static_assert(false, "Only a single coverage bridge is supported at the moment!");
+#endif
+
     // Add functions you'd like to periodically invoke on a paused simulator here.
     if (profile_interval != -1) {
     register_task([this]() { return this->profile_models(); }, 0);

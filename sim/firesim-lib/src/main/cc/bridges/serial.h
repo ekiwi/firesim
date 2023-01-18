@@ -44,7 +44,7 @@ public:
   ~serial_t();
   virtual void init();
   virtual void tick();
-  virtual bool terminate() { return fesvr->done(); }
+  virtual bool terminate() { return fesvr->done() && !waiting_for_coverage; }
   virtual int exit_code() { return fesvr->exit_code(); }
   virtual void finish(){};
 
@@ -67,6 +67,9 @@ private:
   void handle_loadmem_read(firesim_loadmem_t loadmem);
   void handle_loadmem_write(firesim_loadmem_t loadmem);
   void serial_bypass_via_loadmem();
+
+  // synchronization with coverage collection
+  bool waiting_for_coverage = false;
 };
 #endif // SERIALBRIDGEMODULE_struct_guard
 

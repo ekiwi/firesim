@@ -2,7 +2,16 @@
 #ifdef SERIALBRIDGEMODULE_struct_guard
 
 #include "serial.h"
+#include <iostream>
 #include <assert.h>
+
+
+// signal from serial module to coverage
+extern bool coverage_start_scanning;
+// signal from coverage to serial module
+extern bool coverage_done_scanning;
+// signals whether coverage bridge is installed
+extern bool coverage_available;
 
 serial_t::serial_t(simif_t *sim,
                    const std::vector<std::string> &args,
@@ -152,19 +161,44 @@ void serial_t::tick() {
   // First, check to see step_size tokens have been enqueued
   if (!read(this->mmio_addrs->done))
     return;
-  // Collect all the responses from the target
-  this->recv();
-  // Punt to FESVR
-  if (!fesvr->data_available()) {
-    fesvr->tick();
-  }
-  if (fesvr->has_loadmem_reqs()) {
-    serial_bypass_via_loadmem();
-  }
-  if (!terminate()) {
-    // Write all the requests to the target
-    this->send();
-    go();
+
+  if(waiting_for_coverage) {
+      if(coverage_done_scanning) {
+          std::cout << "[SERIAL] done scanning" << std::endl;
+          waiting_for_coverage = false;
+      } else {
+          // Write all the requests to the target
+          this->send();
+          go();
+      }
+  } else {
+      // Collect all the responses from the target
+      this->recv();
+
+      // Punt to FESVR
+      if (!fesvr->data_available()) {
+          fesvr->tick();
+      }
+      if (fesvr->has_loadmem_reqs()) {
+          serial_bypass_via_loadmem();
+      }
+      if (!terminate()) {
+          // Write all the requests to the target
+          this->send();
+          go();
+      } else if(coverage_available) {
+          // signal to the coverage module that it is time to scan out results
+          waiting_for_coverage = true;
+          coverage_start_scanning = true;
+          std::cout << "[SERIAL] starting to scan out coverage" << std::endl;
+
+          // Write all the requests to the target
+          this->send();
+          go();
+      } else {
+          // done!
+          waiting_for_coverage = false;
+      }
   }
 }
 
