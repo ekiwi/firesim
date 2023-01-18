@@ -219,6 +219,8 @@ class RuntimeHWConfig:
         permissive_driver_args += command_rootfses
         permissive_driver_args += command_niclogs
         permissive_driver_args += command_blkdev_logs
+        # write coverage to JSON
+        permissive_driver_args += ["+cover-json=coverage.json"]
         permissive_driver_args += [f"{tracefile}", f"+trace-select={tracerv_config.select}", f"+trace-start={tracerv_config.start}", f"+trace-end={tracerv_config.end}", f"+trace-output-format={tracerv_config.output_format}", dwarf_file_name]
         permissive_driver_args += [f"+autocounter-readrate={autocounter_config.readrate}", autocounterfile]
         permissive_driver_args += [command_dromajo]
