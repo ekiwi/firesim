@@ -1,0 +1,1 @@
+../../../../../../../coverage/firesim-coverage/src/coverage/midas/CoverageScanChain.scala
