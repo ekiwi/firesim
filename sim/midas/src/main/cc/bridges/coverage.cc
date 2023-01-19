@@ -126,7 +126,7 @@ void coverage_t::read_counts() {
                 printfile << "{\"" << covers[counter_index] << "\":" << value << "}," << std::endl;
             } else {
                 printfile << "{\"" << covers[counter_index] << "\":" << value << "}" << std::endl
-                          << "]}" << std::endl << "}" << std::endl;
+                          << "]}" << std::endl << "]" << std::endl;
                 printfile.close();
             }
 
