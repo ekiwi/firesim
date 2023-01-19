@@ -19,3 +19,6 @@
 [submodule "utils/FlameGraph"]
 	path = utils/fireperf/FlameGraph
 	url = https://github.com/brendangregg/FlameGraph.git
+[submodule "coverage"]
+	path = coverage
+	url = git@github.com:ekiwi/simulator-independent-coverage.git
