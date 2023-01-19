@@ -47,6 +47,7 @@ lazy val icenet        = ProjectRef(chipyardDir, "icenet")
 lazy val testchipip    = ProjectRef(chipyardDir, "testchipip")
 lazy val sifive_blocks = ProjectRef(chipyardDir, "sifive_blocks")
 lazy val firechip      = ProjectRef(chipyardDir, "firechip")
+lazy val coverage      = ProjectRef(file("../coverage/coverage"), "coverage")
 
 lazy val targetutils   = (project in file("midas/targetutils"))
   .settings(commonSettings)
@@ -58,6 +59,7 @@ lazy val firesimRef = ProjectRef(file("."), "firesim")
 
 lazy val midas = (project in file("midas"))
   .dependsOn(rocketchip)
+  .dependsOn(coverage) // for scanchain insertion pass
   .settings(libraryDependencies ++= Seq(
     "org.scalatestplus" %% "scalacheck-1-14" % "3.1.3.0" % "test"))
   .settings(commonSettings)
