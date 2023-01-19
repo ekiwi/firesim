@@ -22,8 +22,11 @@ class CoverageBundle(val counterWidth: Int) extends Bundle {
   val cover_out = Input(UInt(counterWidth.W))
 }
 
-class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) extends BridgeModule[HostPortIO[CoverageBundle]]()(p) {
-  lazy val module = new BridgeModuleImp(this) with UnidirectionalDMAToHostCPU {
+class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) extends BridgeModule[HostPortIO[CoverageBundle]]()(p) with StreamToHostCPU {
+  //  The fewest number of BRAMS that produces a memory that is 512b wide.(8 X 32Kb BRAM)
+  val toHostCPUQueueDepth = 6144 // 12 Ultrascale+ URAMs
+
+  lazy val module = new BridgeModuleImp(this) {
     val io = IO(new WidgetIO())
     val hPort = IO(HostPort(new CoverageBundle(key.counterWidth)))
 
@@ -44,26 +47,22 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     // fromTarget: we connect the cover chain output to the DMA queue
     hPort.toHost.hReady := true.B
 
-    // DMA port
-    override lazy val toHostCPUQueueDepth = 6144 // 12 Ultrascale+ URAMs
-    override lazy val dmaSize = BigInt(dmaBytes * toHostCPUQueueDepth)
-
     // how many coverage counters fit into a single DMA beat?
-    val CountersPerBeat = (dmaBytes * 8) / PowerOfTwoCounterWidth
+    val CountersPerBeat = (BridgeStreamConstants.streamWidthBits) / PowerOfTwoCounterWidth
     require(CountersPerBeat > 0,
-      f"Coverage counter size (${key.counterWidth}bit) cannot be greater than the DMA beat size (${dmaBytes * 8}bit)")
+      f"Coverage counter size (${key.counterWidth}bit) cannot be greater than the DMA beat size (${BridgeStreamConstants.streamWidthBits}bit)")
 
     // adapt smaller counter tokens to larger DMA size
-    val widthAdapter = Module(new NarrowToWideAdapter(PowerOfTwoCounterWidth, dma.nastiXDataBits))
-    outgoingPCISdat.io.enq <> widthAdapter.io.out
+    val widthAdapter = Module(new NarrowToWideAdapter(PowerOfTwoCounterWidth, BridgeStreamConstants.streamWidthBits))
+    streamEnq <> widthAdapter.io.out
 
     // receiving data is delayed by two _target_ cycles because of the
     // registers on the from/to host interface
-    val receiving = RegEnable(RegEnable(scanning, false.B, hPort.toHost.fire()), false.B, hPort.toHost.fire())
+    val receiving = RegEnable(RegEnable(scanning, false.B, hPort.toHost.fire), false.B, hPort.toHost.fire)
 
     // receive data from target
     widthAdapter.io.in.bits := hPort.hBits.cover_out
-    widthAdapter.io.in.valid := receiving && hPort.toHost.fire()
+    widthAdapter.io.in.valid := receiving && hPort.toHost.fire
 
     // we want to potentially receive some more values in order to flush out the size adapter
     val ValuesToRead = math.ceil(NumberOfCounters.toDouble / CountersPerBeat.toDouble).toInt * CountersPerBeat
@@ -72,7 +71,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     val coverOutCounter = Reg(UInt(32.W))
     val fromHostDone = coverOutCounter === ValuesToRead.U
     when(startScanning) { coverOutCounter := 0.U }
-    .elsewhen(hPort.toHost.fire() && receiving && !fromHostDone) {
+    .elsewhen(hPort.toHost.fire && receiving && !fromHostDone) {
       coverOutCounter := coverOutCounter + 1.U
     }
 
@@ -83,7 +82,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     val enCount = Reg(UInt(32.W))
     val toHostDone = enCount === key.covers.length.U
     when(startScanning) { enCount := 0.U }
-        .elsewhen(hPort.fromHost.fire() && scanning && !toHostDone) {
+        .elsewhen(hPort.fromHost.fire && scanning && !toHostDone) {
           enCount := enCount + 1.U
         }
 
@@ -125,7 +124,7 @@ class NarrowToWideAdapter(inW: Int, outW: Int)  extends MultiIOModule {
   val nBeats = outW / inW
 
   // shift new values in whenever a valid input transaction happens
-  val doShift = io.in.fire()
+  val doShift = io.in.fire
   // TODO: replace with ShiftRegisters when Chisel 3.5 is released
   val regs = Seq.iterate(io.in.bits, nBeats + 1)(RegEnable(_, doShift)).drop(1)
   val inputBuffer = RegEnable(io.in.bits, doShift)
@@ -139,7 +138,7 @@ class NarrowToWideAdapter(inW: Int, outW: Int)  extends MultiIOModule {
   val shiftFull = count === nBeats.U
 
   // we can accept new data if the shift register is not full, or if it will be emptied this cycle
-  io.in.ready := !shiftFull || io.out.fire()
+  io.in.ready := !shiftFull || io.out.fire
 
   // we can output data when the shift register is full
   io.out.valid := shiftFull
