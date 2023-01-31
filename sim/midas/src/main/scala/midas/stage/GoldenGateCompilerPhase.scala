@@ -10,7 +10,7 @@ import firrtl.{CircuitState, AnnotationSeq}
 import firrtl.annotations.{Annotation}
 import firrtl.options.{Phase, Dependency}
 import firrtl.passes.memlib.{InferReadWrite, InferReadWriteAnnotation}
-import firrtl.stage.{Forms, FirrtlCircuitAnnotation}
+import firrtl.stage.{Forms, FirrtlCircuitAnnotation, RunFirrtlTransformAnnotation}
 import firrtl.stage.transforms.Compiler
 
 class GoldenGateCompilerPhase extends Phase {
@@ -32,6 +32,10 @@ class GoldenGateCompilerPhase extends Phase {
       firrtl.passes.memlib.PassthroughSimpleSyncReadMemsAnnotation)
 
     val state = CircuitState(allCircuits.head, firrtl.ChirrtlForm, annotations ++ midasAnnos)
+
+    // find any custom passes that might need to run:
+    val passes = annotations.collect { case a : RunFirrtlTransformAnnotation => a }
+    println("Custom passes found: " + passes.mkString("\n"))
 
     // Lower the target design and run additional target transformations before Golden Gate xforms
     val targetLoweringCompiler = new Compiler(
