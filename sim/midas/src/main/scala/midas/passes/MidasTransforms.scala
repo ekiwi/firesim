@@ -57,6 +57,7 @@ private[midas] class MidasTransforms extends Transform {
       new ResolveAndCheck,
       new AssertionSynthesis,
       new PrintSynthesis,
+      CoverageScanChainPass,
       new ResolveAndCheck,
       new EmitFirrtl("post-debug-synthesis.fir"),
       new fame.EmitFAMEAnnotations("post-debug-synthesis.json"),
