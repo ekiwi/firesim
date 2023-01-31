@@ -60,7 +60,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
     val receiving = RegEnable(RegEnable(scanning, false.B, hPort.toHost.fire), false.B, hPort.toHost.fire)
 
     // receive data from target
-    widthAdapter.io.in.bits := hPort.hBits.cover_out
+    widthAdapter.io.in.bits := hPort.hBits.cover_chain_out
     widthAdapter.io.in.valid := receiving && hPort.toHost.fire
 
     // we want to potentially receive some more values in order to flush out the size adapter
@@ -87,7 +87,7 @@ class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) exten
 
     // the scan chain is enabled iff we are in scanning mode
     hPort.fromHost.hValid := true.B
-    hPort.hBits.cover_en := scanning && !toHostDone
+    hPort.hBits.cover_chain_en := scanning && !toHostDone
 
     // logic to start/stop scanning
     when(startScanning) { scanning := true.B }
