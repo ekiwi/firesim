@@ -26,8 +26,10 @@ BASE_FILE_NAME := FireSim-generated
 # RTL Generation #
 ##################
 long_name := $(DESIGN_PACKAGE).$(DESIGN).$(TARGET_CONFIG)
-FIRRTL_FILE := $(GENERATED_DIR)/$(long_name).fir
-ANNO_FILE := $(GENERATED_DIR)/$(long_name).anno.json
+PREINST_FIRRTL_FILE := $(GENERATED_DIR)/$(long_name).fir
+PREINST_ANNO_FILE := $(GENERATED_DIR)/$(long_name).anno.json
+FIRRTL_FILE := $(GENERATED_DIR)/$(long_name).instrumented.fir.lo.fir
+ANNO_FILE := $(GENERATED_DIR)/$(long_name).instrumented.anno.json
 
 ifdef FIRESIM_STANDALONE
 	firesim_sbt_project := {file:${chipyard_dir}}firechip
@@ -39,13 +41,27 @@ else
 	firesim_sbt_project := firechip
 endif
 
-$(FIRRTL_FILE) $(ANNO_FILE): $(SCALA_SOURCES) $(FIRRTL_JAR) $(SCALA_BUILDTOOL_DEPS)
+$(PREINST_FIRRTL_FILE) $(PREINST_ANNO_FILE): $(SCALA_SOURCES) $(FIRRTL_JAR) $(SCALA_BUILDTOOL_DEPS)
 	mkdir -p $(@D)
 	$(call run_scala_main,$(firesim_sbt_project),chipyard.Generator,\
 		--target-dir $(GENERATED_DIR) \
 		--name $(long_name) \
 		--top-module $(DESIGN_PACKAGE).$(DESIGN) \
 		--legacy-configs $(TARGET_CONFIG_PACKAGE):$(TARGET_CONFIG))
+
+# coverage instrumentation
+$(FIRRTL_FILE) $(ANNO_FILE): $(SCALA_SOURCES) $(FIRRTL_JAR) $(SCALA_BUILDTOOL_DEPS) $(PREINST_FIRRTL_FILE) $(PREINST_ANNO_FILE)
+	$(call run_scala_main,$(firesim_sbt_project),firrtl.stage.FirrtlMain,\
+		--emit-cover-info \
+		--line-coverage \
+		-ll info \
+		-i $(PREINST_FIRRTL_FILE) \
+		-faf $(PREINST_ANNO_FILE) \
+		-E mid \
+		--no-dedup \
+		-foaf $(ANNO_FILE) \
+		-o $(FIRRTL_FILE))
+
 
 # DOC include start: Bridge Build System Changes
 ##########################
@@ -229,12 +245,12 @@ endif
 # the binary name. These are captured with $($*_ARGS)
 $(OUTPUT_DIR)/%.run: $(OUTPUT_DIR)/% $(EMUL)
 	cd $(dir $($(EMUL))) && \
-	./$(notdir $($(EMUL))) $< $($*_ARGS) $($(EMUL)_args) $(COMMON_SIM_ARGS) $(MIDAS_LEVEL_SIM_ARGS) $(EXTRA_SIM_ARGS) \
+	./$(notdir $($(EMUL))) $< $($*_ARGS) $($(EMUL)_args)  $(COMMON_SIM_ARGS) $(MIDAS_LEVEL_SIM_ARGS) $(EXTRA_SIM_ARGS) \
 	2> /dev/null 2> $@ && [ $$PIPESTATUS -eq 0 ]
 
 $(OUTPUT_DIR)/%.out: $(OUTPUT_DIR)/% $(EMUL)
 	cd $(dir $($(EMUL))) && \
-	./$(notdir $($(EMUL))) $< $($*_ARGS) $($(EMUL)_args) $(COMMON_SIM_ARGS) $(MIDAS_LEVEL_SIM_ARGS) $(EXTRA_SIM_ARGS) \
+	./$(notdir $($(EMUL))) $< $($*_ARGS) $($(EMUL)_args) +cover-json=$@.cover.json  $(COMMON_SIM_ARGS) $(MIDAS_LEVEL_SIM_ARGS) $(EXTRA_SIM_ARGS) \
 	$(disasm) $@ && [ $$PIPESTATUS -eq 0 ]
 
 $(OUTPUT_DIR)/%.vpd: $(OUTPUT_DIR)/% $(EMUL)-debug
