@@ -7,13 +7,9 @@ import chisel3.experimental.{DataMirror, Direction}
 import scala.collection.immutable.ListMap
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.util.DecoupledHelper
-import midas.widgets._
+import midas.coverage.CoverageBridgeKey
 
 
-case class CoverageBridgeKey(counterWidth: Int, covers: List[String]) {
-  override def toString =
-    s"CoverageBridgeKey(counterWidth = $counterWidth, covers = ${covers.length})"
-}
 
 
 class CoverageBundle(val counterWidth: Int) extends Bundle {
