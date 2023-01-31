@@ -4,6 +4,7 @@ package midas
 package passes
 
 import midas.core._
+import midas.coverage.CoverageScanChainPass
 
 import freechips.rocketchip.config.Parameters
 
