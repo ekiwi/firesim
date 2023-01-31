@@ -6,7 +6,7 @@ import midas.{TargetTransforms, HostTransforms}
 import midas.passes.{MidasTransforms}
 import midas.stage.phases.{CreateParametersInstancePhase, ConfigParametersAnnotation}
 
-import firrtl.{CircuitState, AnnotationSeq}
+import firrtl.{CircuitState, AnnotationSeq, Transform}
 import firrtl.annotations.{Annotation}
 import firrtl.options.{Phase, Dependency}
 import firrtl.passes.memlib.{InferReadWrite, InferReadWriteAnnotation}
@@ -34,8 +34,13 @@ class GoldenGateCompilerPhase extends Phase {
     val state = CircuitState(allCircuits.head, firrtl.ChirrtlForm, annotations ++ midasAnnos)
 
     // find any custom passes that might need to run:
-    val passes = annotations.collect { case a : RunFirrtlTransformAnnotation => a }
-    println("Custom passes found: " + passes.mkString("\n"))
+    val passes: Seq[Transform] = annotations.collect { case a : RunFirrtlTransformAnnotation => a.transform }
+    println("Custom passes found: " + passes.map(_.name).mkString("\n"))
+
+    // coverage passes should run during the initial lowering
+    val coveragePasses = passes.filter(_.name.startsWith("coverage."))
+    println(s"Found ${coveragePasses.length} coverage passes")
+    val coveragePassDependencies = coveragePasses.map(Dependency.fromTransform)
 
     // Lower the target design and run additional target transformations before Golden Gate xforms
     val targetLoweringCompiler = new Compiler(
@@ -45,6 +50,7 @@ class GoldenGateCompilerPhase extends Phase {
         Dependency[firrtl.passes.memlib.InferReadWrite],
         Dependency[firrtl.transforms.SimplifyMems],
       ) ++
+      coveragePassDependencies ++
       Forms.LowForm ++
       p(TargetTransforms))
     logger.info("Pre-GG Target Transformation Ordering\n")
