@@ -45,7 +45,7 @@ class coverage_t: public bridge_driver_t
         // The number of stream beats to pull off the FPGA on each invocation of
         // tick() This will be set based on the ratio of token_size :
         // desired_batch_beats
-        size_t batch_beats;
+        size_t batch_beats = 1; // maybe slow but will hopefully work
         // This will be modified to be a multiple of the token size
         const size_t desired_batch_beats = stream_depth / 2;        std::ofstream printfile;
         uint64_t sim_start_time;
