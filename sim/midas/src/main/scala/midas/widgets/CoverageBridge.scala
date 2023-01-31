@@ -1,4 +1,4 @@
-package coverage.midas
+package midas.widgets
 
 import chisel3._
 import chisel3.util._
@@ -17,9 +17,8 @@ case class CoverageBridgeKey(counterWidth: Int, covers: List[String]) {
 
 
 class CoverageBundle(val counterWidth: Int) extends Bundle {
-  val clock = Input(Clock())
-  val cover_en = Output(Bool())
-  val cover_out = Input(UInt(counterWidth.W))
+  val cover_chain_en = Output(Bool())
+  val cover_chain_out = Input(UInt(counterWidth.W))
 }
 
 class CoverageBridgeModule(key: CoverageBridgeKey)(implicit p: Parameters) extends BridgeModule[HostPortIO[CoverageBundle]]()(p) with StreamToHostCPU {
