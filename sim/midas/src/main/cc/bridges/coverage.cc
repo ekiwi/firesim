@@ -17,14 +17,15 @@ coverage_t::coverage_t(
     simif_t* sim,
     std::vector<std::string> &args,
     COVERAGEBRIDGEMODULE_struct * mmio_addrs,
-    unsigned int dma_address,
+    unsigned int stream_idx,
+    unsigned int stream_depth,
     unsigned int counter_width,
     unsigned int cover_count,
     unsigned int counters_per_beat,
     const char* const* covers) :
     bridge_driver_t(sim),
     mmio_addrs(mmio_addrs),
-    dma_address(dma_address),
+    stream_idx(stream_idx), stream_depth(stream_depth),
     counter_width(counter_width),
     cover_count(cover_count),
     counters_per_beat(counters_per_beat),
@@ -34,6 +35,16 @@ coverage_t::coverage_t(
     first_tick(true)
 {
   assertm(counter_width <= 64, "The maximum counter size supported by the C++ code is 64-bit!");
+
+  // Choose a multiple of token_bytes for the batch size
+  if (((beat_bytes * desired_batch_beats) % token_bytes) != 0) {
+    assert(token_bytes % beat_bytes == 0);
+    auto beats_per_token = token_bytes / beat_bytes;
+    this->batch_beats =
+        (desired_batch_beats / beats_per_token) * beats_per_token;
+  } else {
+    this->batch_beats = desired_batch_beats;
+  }
 
   // parse the arguments to find the name of the output file
   std::string filename = "";
@@ -66,13 +77,28 @@ void coverage_t::init() {
 }
 
 void coverage_t::read_counts() {
-    const auto available = read(mmio_addrs->outgoing_count);
+    const auto batch_bytes = batch_beats * beat_bytes;
+    const size_t maximum_batch_bytes = batch_bytes;
+    const size_t minimum_batch_bytes = batch_bytes;
+
+
+    // See FireSim issue #208
+    // This needs to be page aligned, as a DMA request that spans a page is
+    // fractured into a pair, and for reasons unknown, first beat of the second
+    // request is lost. Once aligned, qequests larger than a page will be
+    // fractured into page-size (64-beat) requests and these seem to behave
+    // correctly.
+    alignas(4096) char buf[maximum_batch_bytes];
+
+    uint32_t bytes_received =
+      pull(stream_idx, (char *)buf, maximum_batch_bytes, minimum_batch_bytes);
+
 
     // std::cout << "[COVERAGE] available=" << available << std::endl;
 
     if(available > 0) {
         // dynamic stack allocation .... messy, but it seems to work
-        const auto batch_bytes = available * beat_bytes;
+
         alignas(4096) unsigned char buf[batch_bytes];
         uint32_t bytes_received = pull(dma_address, (char*)buf, batch_bytes);
         if (bytes_received != batch_bytes) {
