@@ -96,11 +96,7 @@ void coverage_t::read_counts() {
 
     // std::cout << "[COVERAGE] available=" << available << std::endl;
 
-    if(available > 0) {
-        // dynamic stack allocation .... messy, but it seems to work
-
-        alignas(4096) unsigned char buf[batch_bytes];
-        uint32_t bytes_received = pull(dma_address, (char*)buf, batch_bytes);
+    if(bytes_received > 0) {
         if (bytes_received != batch_bytes) {
             std::cerr << "[COVERAGE] ERR MISMATCH! on reading print tokens. Read " << bytes_received
                       << " bytes, wanted " << batch_bytes << " bytes." << std::endl;
