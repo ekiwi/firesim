@@ -36,16 +36,6 @@ coverage_t::coverage_t(
 {
   assertm(counter_width <= 64, "The maximum counter size supported by the C++ code is 64-bit!");
 
-  // Choose a multiple of token_bytes for the batch size
-  if (((beat_bytes * desired_batch_beats) % token_bytes) != 0) {
-    assert(token_bytes % beat_bytes == 0);
-    auto beats_per_token = token_bytes / beat_bytes;
-    this->batch_beats =
-        (desired_batch_beats / beats_per_token) * beats_per_token;
-  } else {
-    this->batch_beats = desired_batch_beats;
-  }
-
   // parse the arguments to find the name of the output file
   std::string filename = "";
   const std::string arg_name("+cover-json=");
@@ -105,6 +95,7 @@ void coverage_t::read_counts() {
         }
 
         // convert bytes read into cover counts
+        const auto available = bytes_received / batch_bytes; // should always be one
         const auto received_covers = available * counters_per_beat;
 
         // std::cout << "[COVERAGE] received " << received_covers << " cover counts" << std::endl;
