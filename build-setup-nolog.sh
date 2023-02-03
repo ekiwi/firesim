@@ -12,7 +12,7 @@ RDIR=$(pwd)
 FASTINSTALL=false
 IS_LIBRARY=false
 SKIP_TOOLCHAIN=false
-SKIP_VALIDATE=false
+SKIP_VALIDATE=true # Changed from upstream to streamline ASPLOS repro
 TOOLCHAIN=riscv-tools
 USE_PINNED_DEPS=true
 
@@ -67,7 +67,7 @@ done
 
 # before doing anything verify that you are on a release branch/tag
 set +e
-tag=$(git describe --exact-match --tags)
+tag=$(git describe --exact-match --tags &> /dev/null)
 tag_ret_code="$?"
 set -e
 if [ "$tag_ret_code" -ne 0 ]; then
