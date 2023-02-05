@@ -268,3 +268,7 @@ echo "To generate simulator RTL and run metasimulation simulation, source env.sh
 echo "To use the manager to deploy builds/simulations on EC2, source sourceme-f1-manager.sh to setup your environment."
 echo "To run builds/simulations manually on this machine, source sourceme-f1-full.sh to setup your environment."
 echo "For more information, see docs at https://docs.fires.im/."
+
+#ASPLOS 2023 Addendum
+cd "$RDIR/deploy/workloads"
+aws s3 sync s3://asplos-2023-simulator-independent-coverage/ linux-poweroff
