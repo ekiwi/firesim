@@ -1,5 +1,7 @@
 run_farm:
+  # managerinit replace start
   base_recipe: run-farm-recipes/aws_ec2.yaml
+  # managerinit replace end
   recipe_arg_overrides:
     run_farm_tag: linuxpoweroff-coverage
     run_farm_hosts_to_use:
