@@ -38,7 +38,7 @@ autocounter:
 
 workload:
     workload_name: linux-poweroff-uniform.json
-    terminate_on_completion: yes
+    terminate_on_completion: false
     suffix_tag: null
 
 host_debug:
