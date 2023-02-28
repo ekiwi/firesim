@@ -52,6 +52,14 @@ agfis_to_share:
     # - coverage_rocket_2
     # - coverage_rocket_1
     # - coverage_rocket_baseline
+    # - coverage_rocket_48_f_max
+    # - coverage_rocket_32_f_max
+    # - coverage_rocket_16_f_max
+    # - coverage_rocket_8_f_max
+    # - coverage_rocket_4_f_max
+    # - coverage_rocket_2_f_max
+    # - coverage_rocket_1_f_max
+    # - coverage_rocket_baseline_f_max
     # - coverage_boom_48
     # - coverage_boom_32
     # - coverage_boom_16
