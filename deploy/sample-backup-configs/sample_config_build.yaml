@@ -16,6 +16,7 @@ builds_to_run:
     # this section references builds defined in config_build_recipes.yaml
     # if you add a build here, it will be built when you run buildafi
 
+    # rocket chip constrained to 90MHz to measure resource utilization
     # - coverage_rocket_48
     # - coverage_rocket_32
     - coverage_rocket_16
@@ -24,6 +25,15 @@ builds_to_run:
     # - coverage_rocket_2
     # - coverage_rocket_1
     # - coverage_rocket_baseline
+    # rocket chip constrained to 140MHz to measure maximum frequency
+    # - coverage_rocket_48_f_max
+    # - coverage_rocket_32_f_max
+    # - coverage_rocket_16_f_max
+    # - coverage_rocket_8_f_max
+    # - coverage_rocket_4_f_max
+    # - coverage_rocket_2_f_max
+    # - coverage_rocket_1_f_max
+    # - coverage_rocket_baseline_f_max
     # - coverage_boom_48
     # - coverage_boom_32
     # - coverage_boom_16

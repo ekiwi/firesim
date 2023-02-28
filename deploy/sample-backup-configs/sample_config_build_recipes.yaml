@@ -22,7 +22,7 @@
 #    #bit_builder_arg_overrides:
 #    #  <ARG>: <OVERRIDE>
 
-# ASPLOS 2023: Build recipes for Rocket-based designs
+# ASPLOS 2023: Build recipes for Rocket-based designs, constrained to 90MHz for resource utilization
 coverage_rocket_48:
     DESIGN: FireSim
     TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
@@ -95,7 +95,80 @@ coverage_rocket_baseline:
     metasim_customruntimeconfig: null
     bit_builder_recipe: bit-builder-recipes/f1.yaml
 
-# ASPLOS 2023: Build recipes for Boom-based designs
+# constrained to 140MHz in order to measure f_max
+coverage_rocket_48_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_32_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW32_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_16_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW16_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_8_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW8_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_4_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW4_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_2_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW2_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_1_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW1_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_baseline_f_max:
+    DESIGN: FireSim
+    TARGET_CONFIG: WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F140MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+# ASPLOS 2023: Build recipes for Boom-based designs, unfortunately newer Vivado versions segfault on instrumented BOOM builds
 coverage_boom_48:
     DESIGN: FireSim
     TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
